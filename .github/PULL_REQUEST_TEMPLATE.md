@@ -23,10 +23,6 @@ Closes #
 
 ```
 
-## UI Evidence
-
-<!-- UI 변경 전후 캡처 또는 영상을 추가합니다. -->
-
 ## Security and Contract
 
 - [ ] 비밀정보, API 키, 실제 자격증명이 포함되지 않았습니다.
@@ -34,7 +30,6 @@ Closes #
 - [ ] LIVE/FIXTURE와 DEVNET/MAINNET 표시를 확인했습니다.
 - [ ] 오류, 만료, BLOCK, 재연결 상태를 확인했습니다.
 
-## Reviewer Notes
+## Notes
 
-<!-- 집중적으로 확인해야 할 부분과 알려진 제한을 기록합니다. -->
-
+<!-- 알려진 제한이나 후속 작업이 있다면 기록합니다. -->
