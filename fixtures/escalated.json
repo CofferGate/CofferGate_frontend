@@ -1,0 +1,135 @@
+{
+  "data": {
+    "proposalId": "prop_escalated_0001",
+    "action": "SWAP",
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr",
+    "inputSymbol": "SOL",
+    "outputSymbol": "USDC",
+    "amountAtomic": "30000000",
+    "amountDisplay": "0.0300 SOL",
+    "amountUsd": 4.5,
+    "rationale": "USDC 운영 잔고 보충을 제안하지만, 스왑 이후 예상 준비금이 최소 임계값에 근접해 운영자 확인이 필요합니다.",
+    "confidence": 0.69,
+    "evidenceRefs": [
+      {
+        "id": "ev_price_sol_usdc",
+        "label": "SOL/USDC 가격 피드",
+        "sourceType": "PRICE_FEED",
+        "observedAt": "2026-07-31T02:24:58.000Z"
+      },
+      {
+        "id": "ev_balance_ops_wallet",
+        "label": "운영 지갑 잔고 스냅샷",
+        "sourceType": "ONCHAIN_BALANCE",
+        "observedAt": "2026-07-31T02:24:55.000Z"
+      },
+      {
+        "id": "ev_policy_reserve_threshold",
+        "label": "최소 준비금 정책 문서",
+        "sourceType": "POLICY_DOCUMENT",
+        "observedAt": "2026-07-31T00:00:00.000Z"
+      }
+    ],
+    "dataAsOf": "2026-07-31T02:25:00.000Z",
+    "expiresAt": "2026-07-31T02:35:00.000Z",
+    "policyVersion": "policy-2026.07.1",
+    "decision": "ESCALATE",
+    "status": "ESCALATED",
+    "ruleChecks": [
+      {
+        "code": "ALLOWED_MINT",
+        "label": "허용 자산",
+        "result": "PASS",
+        "actual": "SOL,USDC",
+        "expected": "SOL,USDC",
+        "message": "입력·출력 자산이 허용 목록에 포함되어 있습니다."
+      },
+      {
+        "code": "PER_TX_LIMIT",
+        "label": "거래 한도",
+        "result": "PASS",
+        "actual": 4.5,
+        "expected": 5,
+        "message": "거래 금액이 건당 한도 이내입니다."
+      },
+      {
+        "code": "DAILY_LIMIT",
+        "label": "일일 한도",
+        "result": "PASS",
+        "actual": 4.5,
+        "expected": 20,
+        "message": "당일 누적 사용액이 일일 한도 이내입니다."
+      },
+      {
+        "code": "RESERVE_THRESHOLD",
+        "label": "최소 준비금",
+        "result": "REVIEW",
+        "actual": "10.05 USDC",
+        "expected": ">= 10.00 USDC",
+        "message": "스왑 후 예상 준비금이 임계값에 근접해 운영자 확인이 필요합니다."
+      },
+      {
+        "code": "QUOTE_FRESHNESS",
+        "label": "시세 최신성",
+        "result": "PASS",
+        "actual": 5,
+        "expected": 15,
+        "message": "시세 조회 후 5초 경과, 최대 허용 15초 이내입니다."
+      },
+      {
+        "code": "SLIPPAGE",
+        "label": "슬리피지",
+        "result": "PASS",
+        "actual": 20,
+        "expected": 50,
+        "message": "슬리피지 20bps로 한도(50bps) 이내입니다."
+      },
+      {
+        "code": "PRICE_IMPACT",
+        "label": "가격 영향",
+        "result": "PASS",
+        "actual": 5,
+        "expected": 100,
+        "message": "가격 영향 5bps로 미미합니다."
+      },
+      {
+        "code": "ALLOWED_PROGRAM",
+        "label": "허용 프로그램",
+        "result": "PASS",
+        "actual": "Jupiter v6 Aggregator",
+        "expected": "Jupiter v6 Aggregator",
+        "message": "승인된 프로그램을 통해 라우팅되었습니다."
+      },
+      {
+        "code": "ALLOWED_SIGNER",
+        "label": "허용 서명자",
+        "result": "PASS",
+        "actual": "ops-treasury-signer",
+        "expected": "ops-treasury-signer",
+        "message": "허용된 서명자 목록과 일치합니다."
+      },
+      {
+        "code": "SIMULATION",
+        "label": "시뮬레이션",
+        "result": "PASS",
+        "actual": true,
+        "expected": true,
+        "message": "시뮬레이션이 성공했습니다."
+      },
+      {
+        "code": "CIRCUIT_BREAKER",
+        "label": "회로 차단기",
+        "result": "PASS",
+        "actual": "ACTIVE",
+        "expected": "ACTIVE",
+        "message": "회로 차단기가 정상 작동 상태입니다."
+      }
+    ]
+  },
+  "meta": {
+    "requestId": "req_mock_escalated_001",
+    "generatedAt": "2026-07-31T02:25:02.000Z",
+    "environment": "mock"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "data": {
+    "overallStatus": "healthy",
+    "checkedAt": "2026-07-31T01:55:32.000Z",
+    "dataMode": "mock",
+    "network": "devnet",
+    "services": [
+      {
+        "serviceId": "control-plane",
+        "status": "healthy",
+        "checkedAt": "2026-07-31T01:55:32.000Z"
+      },
+      {
+        "serviceId": "vertex-ai",
+        "status": "healthy",
+        "checkedAt": "2026-07-31T01:55:32.000Z"
+      },
+      {
+        "serviceId": "firestore",
+        "status": "healthy",
+        "checkedAt": "2026-07-31T01:55:32.000Z"
+      },
+      {
+        "serviceId": "private-executor",
+        "status": "healthy",
+        "checkedAt": "2026-07-31T01:55:32.000Z"
+      },
+      {
+        "serviceId": "cloud-kms",
+        "status": "healthy",
+        "checkedAt": "2026-07-31T01:55:32.000Z"
+      },
+      {
+        "serviceId": "jupiter-api",
+        "status": "healthy",
+        "checkedAt": "2026-07-31T01:55:32.000Z"
+      },
+      {
+        "serviceId": "solana-rpc",
+        "status": "healthy",
+        "checkedAt": "2026-07-31T01:55:32.000Z"
+      }
+    ]
+  },
+  "meta": {
+    "requestId": "req_mock_system_readiness_001",
+    "generatedAt": "2026-07-31T01:55:32.000Z",
+    "environment": "mock"
+  }
+}

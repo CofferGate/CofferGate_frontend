@@ -1,0 +1,39 @@
+{
+  "data": {
+    "policyVersion": "policy-2026.07.1",
+    "effectiveFrom": null,
+    "allowedInputMints": [
+      "So11111111111111111111111111111111111111112"
+    ],
+    "allowedOutputMints": [
+      "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
+    ],
+    "allowedAssets": [
+      "SOL",
+      "USDC"
+    ],
+    "maxTransactionUsd": 5,
+    "dailyLimitUsd": 20,
+    "minimumReserve": {
+      "amount": 10,
+      "asset": "USDC"
+    },
+    "maxSlippageBps": 50,
+    "maxPriceImpactBps": 100,
+    "quoteMaxAgeSeconds": 15,
+    "allowedPrograms": [
+      "Jupiter v6 Aggregator"
+    ],
+    "allowedSigners": [
+      "ops-treasury-signer"
+    ],
+    "simulationRequired": true,
+    "circuitBreakerParameters": null,
+    "circuitBreakerStatus": "ACTIVE"
+  },
+  "meta": {
+    "requestId": "req_mock_current_policy_001",
+    "generatedAt": "2026-07-31T01:55:32.000Z",
+    "environment": "mock"
+  }
+}
