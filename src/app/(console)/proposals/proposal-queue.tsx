@@ -75,7 +75,7 @@ const DECISION_STYLE: Record<PolicyDecision, string> = {
 };
 
 function unique(values: string[]) {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+  return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
 }
 
 function shorten(value: string, head = 11, tail = 5) {

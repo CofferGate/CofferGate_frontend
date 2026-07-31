@@ -19,14 +19,14 @@ export interface ConsoleSession {
 }
 
 const ROLE_PERMISSIONS: Record<UserRole, ReadonlySet<Permission>> = {
-  Viewer: new Set([
+  Viewer: new Set<Permission>([
     "view:dashboard",
     "view:proposals",
     "view:activity",
     "view:policy",
     "view:system",
   ]),
-  Operator: new Set([
+  Operator: new Set<Permission>([
     "view:dashboard",
     "view:proposals",
     "view:activity",
@@ -35,7 +35,7 @@ const ROLE_PERMISSIONS: Record<UserRole, ReadonlySet<Permission>> = {
     "request:evaluation",
     "review:escalation",
   ]),
-  Admin: new Set([
+  Admin: new Set<Permission>([
     "view:dashboard",
     "view:proposals",
     "view:activity",
