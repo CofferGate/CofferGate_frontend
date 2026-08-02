@@ -71,7 +71,6 @@ export const mockConsoleStateProvider: ConsoleStateProvider = {
               .filter(Boolean)
           : [],
       lastSyncedAt: meta.generatedAt,
-      meta,
     };
   },
 };

@@ -110,6 +110,7 @@ const STATUS_LABELS: Record<ProposalStatus, string> = {
   PROPOSED: "제안 생성",
   AI_REVIEWED: "AI 검토 완료",
   POLICY_APPROVED: "정책 통과",
+  SIMULATED: "서명 증명 완료",
   ESCALATED: "검토 필요",
   BLOCKED: "차단됨",
   EXECUTING: "실행 중",

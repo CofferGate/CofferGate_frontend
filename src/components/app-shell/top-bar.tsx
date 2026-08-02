@@ -9,11 +9,11 @@ import { MobileNavigation } from "./mobile-navigation";
 export function TopBar({
   snapshot,
 }: {
-  snapshot: ConsoleSnapshot;
+  snapshot: ConsoleSnapshot | null;
   session: ConsoleSession;
   now: string;
 }) {
-  const isProtectionActive = snapshot.circuitBreaker === "ACTIVE";
+  const isProtectionActive = snapshot?.circuitBreaker === "ACTIVE";
 
   return (
     <header className="border-b border-border text-xs text-foreground-muted">
@@ -24,7 +24,11 @@ export function TopBar({
           <div className="flex shrink-0 items-center">
             <span
               className="rounded border border-border-strong bg-surface-raised px-2 py-0.5 text-[10px] font-medium tracking-[0.03em] text-foreground"
-              title={`${snapshot.network.toUpperCase()} · ${snapshot.dataMode.toUpperCase()}`}
+              title={
+                snapshot
+                  ? `${snapshot.network.toUpperCase()} · ${snapshot.dataMode.toUpperCase()}`
+                  : "Devnet 상태 확인 불가"
+              }
             >
               데모 환경
             </span>
@@ -61,7 +65,7 @@ export function TopBar({
                   isProtectionActive ? "text-status-auto" : "text-status-block"
                 }
               >
-                {isProtectionActive ? "정상" : "중단"}
+                {snapshot ? (isProtectionActive ? "정상" : "중단") : "N/A"}
               </span>
             </span>
           </div>
@@ -89,7 +93,7 @@ export function TopBar({
               className="min-w-0 truncate font-mono text-[10px] text-foreground"
               title="Operations Wallet"
             >
-              {snapshot.operationsWallet.replace("…", "...")}
+              {snapshot?.operationsWallet.replace("…", "...") ?? "N/A"}
             </span>
           </span>
         </div>
