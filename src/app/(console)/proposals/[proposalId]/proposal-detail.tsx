@@ -20,6 +20,12 @@ import type {
   RuleCheck,
 } from "@/lib/domain";
 import {
+  formatDemoTokenBalance,
+  getFailedExecutionEvidence,
+  getTransactionExplorerUrl,
+  isAutoExecutionComplete,
+} from "@/lib/domain";
+import {
   hasPermission,
   type ConsoleSession,
 } from "@/lib/auth";
@@ -34,18 +40,14 @@ interface ProposalDetailProps {
   currentPolicyVersion?: string;
   session: ConsoleSession;
   now: string;
-  liveEvidence?: {
-    network: string;
-    signature: string;
-    explorerUrl: string;
-  };
 }
 
 type EvidenceState =
   | "complete"
   | "collecting"
   | "incomplete"
-  | "integrity-error";
+  | "integrity-error"
+  | "failed";
 
 const STATUS_LABELS: Record<ProposalStatus, string> = {
   OBSERVED: "상태 관찰",
@@ -112,6 +114,11 @@ const EVIDENCE_STATE = {
     style: "border-status-block/25 bg-status-block-subtle text-status-block",
     icon: IconBan,
   },
+  failed: {
+    label: "실행 실패",
+    style: "border-status-block/25 bg-status-block-subtle text-status-block",
+    icon: IconBan,
+  },
 } satisfies Record<
   EvidenceState,
   { label: string; style: string; icon: typeof IconCheck }
@@ -172,17 +179,36 @@ function getEvidenceAssessment(
 
   if (integrityError) return { state: "integrity-error", missing };
 
+  if (proposal.status === "FAILED") {
+    if (!proposal.execution?.failure) missing.push("실패 정보");
+    return { state: "failed", missing };
+  }
+
   if (proposal.decision === "AUTO" && proposal.status === "SIMULATED") {
     if (!proposal.execution) missing.push("서명 증명");
     if (!proposal.execution?.simulation) missing.push("시뮬레이션 결과");
     if (!proposal.execution?.kmsRequested) missing.push("KMS 요청 기록");
     if (!proposal.execution?.attestationSignature) missing.push("KMS attestation 서명");
     if (!proposal.execution?.attestedAt) missing.push("KMS attestation 시각");
+  } else if (
+    proposal.decision === "AUTO" &&
+    proposal.status === "RECONCILED"
+  ) {
+    if (!proposal.execution) missing.push("실행 증거");
+    if (proposal.execution?.simulation?.ok !== true) missing.push("성공한 시뮬레이션");
+    if (proposal.execution?.kmsRequested !== true) missing.push("KMS 요청 기록");
+    if (!proposal.execution?.transactionSignature) missing.push("거래 식별자");
+    if (
+      proposal.execution?.commitment !== "confirmed" &&
+      proposal.execution?.commitment !== "finalized"
+    ) {
+      missing.push("confirmed 이상 commitment");
+    }
+    if (proposal.execution?.reconciliation?.status !== "MATCHED") {
+      missing.push("MATCHED 정산 증거");
+    }
   } else if (proposal.decision === "AUTO") {
     if (!proposal.execution) missing.push("실행 증거");
-    if (!proposal.execution?.simulation) missing.push("시뮬레이션 결과");
-    if (!proposal.execution?.transactionSignature) missing.push("거래 식별자");
-    if (!proposal.execution?.reconciliation) missing.push("정산 증거");
   }
 
   if (proposal.decision === "BLOCK") {
@@ -209,8 +235,10 @@ function getEvidenceAssessment(
     "POLICY_APPROVED",
     "EXECUTING",
     "SUBMITTED",
+    "CONFIRMED",
   ];
   if (missing.length > 0) return { state: "incomplete", missing };
+  if (isAutoExecutionComplete(proposal)) return { state: "complete", missing };
   if (collectingStatuses.includes(proposal.status)) {
     return { state: "collecting", missing };
   }
@@ -269,7 +297,6 @@ export function ProposalDetail({
   currentPolicyVersion,
   session,
   now,
-  liveEvidence,
 }: ProposalDetailProps) {
   const [copied, setCopied] = useState(false);
   const expired =
@@ -552,7 +579,6 @@ export function ProposalDetail({
           <ExecutionEvidence
             proposal={proposal}
             environment={environment}
-            liveEvidence={liveEvidence}
           />
         </section>
 
@@ -655,11 +681,9 @@ function RuleItem({ rule }: { rule: RuleCheck }) {
 function ExecutionEvidence({
   proposal,
   environment,
-  liveEvidence,
 }: {
   proposal: Proposal;
   environment: ApiEnvironment;
-  liveEvidence?: ProposalDetailProps["liveEvidence"];
 }) {
   const execution = proposal.execution;
 
@@ -677,8 +701,13 @@ function ExecutionEvidence({
     );
   }
 
+  const explorerUrl = getTransactionExplorerUrl(
+    execution.transactionSignature,
+    environment,
+  );
+  const failureEvidence = getFailedExecutionEvidence(proposal);
   const fields = [
-    ["Jupiter 경로", execution.routeLabel],
+    ["실행 경로", execution.routeLabel],
     ["예상 입력량", execution.expectedInputAmount],
     ["예상 출력량", execution.expectedOutputAmount],
     ["최소 출력량", execution.minimumOutputAmount],
@@ -701,10 +730,33 @@ function ExecutionEvidence({
     ["제출 시각", execution.submittedAt && formatDateTime(execution.submittedAt)],
     ["확정 시각", execution.confirmedAt && formatDateTime(execution.confirmedAt)],
     ["Commitment", execution.commitment],
+    ["출력 토큰 계정", execution.outputTokenAccount],
   ].filter((field): field is string[] => field[1] !== undefined);
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
+      {failureEvidence && (
+        <div className="mb-4 rounded-lg border border-status-block/25 bg-status-block-subtle p-3 text-status-block">
+          <div className="flex items-center gap-2 text-[12px] font-semibold">
+            <IconBan size={14} stroke={1.8} aria-hidden="true" />
+            실행 실패
+          </div>
+          <dl className="mt-3 grid grid-cols-1 gap-x-5 gap-y-3 sm:grid-cols-2">
+            <SummaryField label="실패 코드" value={failureEvidence.code ?? "증거 없음"} mono />
+            <SummaryField
+              label="실패 감지 시각"
+              value={failureEvidence.observedAt ? formatDateTime(failureEvidence.observedAt) : "증거 없음"}
+            />
+            <SummaryField label="실패 메시지" value={failureEvidence.message ?? "증거 없음"} />
+            <SummaryField label="KMS 요청 여부" value={failureEvidence.kmsRequested ? "예" : "아니오"} />
+            <SummaryField
+              label="Transaction signature 존재 여부"
+              value={failureEvidence.hasTransactionSignature ? "예" : "아니오"}
+            />
+          </dl>
+        </div>
+      )}
+
       {fields.length > 0 && (
         <dl className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-4">
           {fields.map(([label, value]) => (
@@ -762,7 +814,7 @@ function ExecutionEvidence({
                 className="ml-2 font-mono text-[10px] text-foreground-subtle"
                 title={execution.kmsKeyVersion}
               >
-                키 {shorten(execution.kmsKeyVersion, 10, 4)}
+                키 {execution.kmsKeyVersion}
               </span>
             )}
           </span>
@@ -783,18 +835,16 @@ function ExecutionEvidence({
                 실제 온체인 거래가 아닙니다.
               </p>
             </div>
-          ) : liveEvidence &&
-            liveEvidence.signature === execution.transactionSignature ? (
+          ) : explorerUrl ? (
             <a
-              href={liveEvidence.explorerUrl}
+              href={explorerUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 font-mono text-cyan-300 hover:text-cyan-200"
-              title={`${liveEvidence.network}: ${liveEvidence.signature}`}
+              className="inline-flex max-w-full items-start gap-1 break-all font-mono text-cyan-300 hover:text-cyan-200"
+              title={execution.transactionSignature}
             >
-              {liveEvidence.network} 거래{" "}
-              {shorten(liveEvidence.signature, 10, 6)}
-              <IconExternalLink size={11} stroke={1.7} aria-hidden="true" />
+              <span>{execution.transactionSignature}</span>
+              <IconExternalLink size={11} stroke={1.7} className="mt-0.5 shrink-0" aria-hidden="true" />
             </a>
           ) : (
             <MissingEvidence>
@@ -837,10 +887,22 @@ function ReconciliationEvidence({ proposal }: { proposal: Proposal }) {
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
       <dl className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-5">
-        <SummaryField label="변경 전 잔액" value={reconciliation.beforeBalance} />
-        <SummaryField label="변경 후 잔액" value={reconciliation.afterBalance} />
-        <SummaryField label="예상 변화량" value={reconciliation.expectedDelta} />
-        <SummaryField label="실제 변화량" value={reconciliation.actualDelta} />
+        <SummaryField
+          label="변경 전 잔액"
+          value={formatDemoTokenBalance(reconciliation.beforeBalance)}
+        />
+        <SummaryField
+          label="변경 후 잔액"
+          value={formatDemoTokenBalance(reconciliation.afterBalance)}
+        />
+        <SummaryField
+          label="예상 변화량"
+          value={formatDemoTokenBalance(reconciliation.expectedDelta)}
+        />
+        <SummaryField
+          label="실제 변화량"
+          value={formatDemoTokenBalance(reconciliation.actualDelta)}
+        />
         <SummaryField
           label="정산 상태"
           value={

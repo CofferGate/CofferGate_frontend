@@ -223,7 +223,11 @@ function Evidence({
 
   return (
     <span className="font-mono text-[10px] text-foreground-muted" title={evidence}>
-      {proposal.status === "SIMULATED" ? "KMS 증명 " : "MOCK 식별자 "}
+      {proposal.status === "SIMULATED"
+        ? "KMS 증명 "
+        : environment === "mock"
+          ? "MOCK 식별자 "
+          : "거래 "}
       {shorten(evidence, 8, 5)}
     </span>
   );

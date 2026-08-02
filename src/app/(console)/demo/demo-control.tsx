@@ -13,7 +13,7 @@ import {
   IconPlayerPlay,
   IconShieldCheck,
 } from "@tabler/icons-react";
-import type { Proposal } from "@/lib/domain";
+import { isAutoExecutionComplete, type Proposal } from "@/lib/domain";
 import {
   hasPermission,
   type ConsoleSession,
@@ -46,13 +46,7 @@ function shortened(value: string, head = 9, tail = 6) {
 }
 
 function autoEvidenceIsComplete(proposal: Proposal) {
-  return Boolean(
-    proposal.decision === "AUTO" &&
-      proposal.execution?.simulation?.ok &&
-      proposal.execution.kmsRequested &&
-      proposal.execution.transactionSignature &&
-      proposal.execution.reconciliation,
-  );
+  return isAutoExecutionComplete(proposal);
 }
 
 function blockEvidenceIsComplete(proposal: Proposal) {
@@ -139,13 +133,21 @@ export function DemoControl({
         },
         {
           label: "서명 조건 확인",
-          technicalState: "KMS_REQUESTED · MOCK",
-          detail: "모의 데이터에서 KMS 호출 조건과 기록을 확인했습니다.",
+          technicalState:
+            dataMode === "MOCK" ? "KMS_REQUESTED · MOCK" : "KMS_SIGNED",
+          detail:
+            dataMode === "MOCK"
+              ? "모의 데이터에서 KMS 호출 조건과 기록을 확인했습니다."
+              : "Cloud KMS가 Devnet 데모 토큰 트랜잭션에 서명했습니다.",
         },
         {
           label: "거래 결과 확인",
-          technicalState: "MOCK_TRANSACTION_RESULT",
-          detail: "모의 거래 결과와 식별자를 확인했습니다.",
+          technicalState:
+            dataMode === "MOCK" ? "MOCK_TRANSACTION_RESULT" : "CONFIRMED",
+          detail:
+            dataMode === "MOCK"
+              ? "모의 거래 결과와 식별자를 확인했습니다."
+              : "Solana Devnet 제출과 confirmation을 확인했습니다.",
         },
         {
           label: "잔액 반영",
@@ -176,7 +178,7 @@ export function DemoControl({
         },
       ],
     }),
-    [autoProposal, blockedProposal, failedRules],
+    [autoProposal, blockedProposal, dataMode, failedRules],
   );
 
   useEffect(() => {
@@ -260,7 +262,9 @@ export function DemoControl({
             CofferGate 작동 방식
           </h1>
           <p className="mt-1.5 text-[13px] text-foreground-muted">
-            허용 여부를 모의 검증하고, 기준을 벗어난 거래는 서명 전에 차단하는 흐름을 확인합니다.
+            실제 금융자산과 Mainnet은 사용하지 않습니다. Cloud KMS가 서명한
+            고정 수량의 데모 토큰 트랜잭션을 Solana Devnet에 제출하고,
+            confirmation과 전후 잔액 reconciliation까지 검증합니다.
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1.5" aria-label="현재 데모 환경">
