@@ -52,6 +52,7 @@ const STATUS_LABELS: Record<ProposalStatus, string> = {
   PROPOSED: "제안 생성",
   AI_REVIEWED: "AI 검토 완료",
   POLICY_APPROVED: "정책 통과",
+  SIMULATED: "서명 증명 완료",
   ESCALATED: "운영자 검토 필요",
   BLOCKED: "차단됨",
   EXECUTING: "실행 중",
@@ -171,7 +172,13 @@ function getEvidenceAssessment(
 
   if (integrityError) return { state: "integrity-error", missing };
 
-  if (proposal.decision === "AUTO") {
+  if (proposal.decision === "AUTO" && proposal.status === "SIMULATED") {
+    if (!proposal.execution) missing.push("서명 증명");
+    if (!proposal.execution?.simulation) missing.push("시뮬레이션 결과");
+    if (!proposal.execution?.kmsRequested) missing.push("KMS 요청 기록");
+    if (!proposal.execution?.attestationSignature) missing.push("KMS attestation 서명");
+    if (!proposal.execution?.attestedAt) missing.push("KMS attestation 시각");
+  } else if (proposal.decision === "AUTO") {
     if (!proposal.execution) missing.push("실행 증거");
     if (!proposal.execution?.simulation) missing.push("시뮬레이션 결과");
     if (!proposal.execution?.transactionSignature) missing.push("거래 식별자");
@@ -724,6 +731,24 @@ function ExecutionEvidence({
             <p className="mt-1 text-status-block">{execution.simulation.error}</p>
           )}
         </div>
+      )}
+
+      {proposal.status === "SIMULATED" && execution.attestationSignature && (
+        <dl className="mt-4 grid grid-cols-1 gap-x-5 gap-y-4 border-t border-border pt-3 sm:grid-cols-2">
+          <SummaryField
+            label="KMS attestation 서명"
+            value={execution.attestationSignature}
+            mono
+          />
+          <SummaryField
+            label="서명 증명 시각"
+            value={
+              execution.attestedAt
+                ? formatDateTime(execution.attestedAt)
+                : "증거 없음"
+            }
+          />
+        </dl>
       )}
 
       <div className="mt-4 border-t border-border pt-3 text-[11px]">

@@ -21,6 +21,7 @@ export function statusVisual(status: ProposalStatus): {
     case "CONFIRMED":
     case "RECONCILED":
     case "POLICY_APPROVED":
+    case "SIMULATED":
       return { icon: IconCircleCheck, colorClass: "text-status-auto" };
     case "ESCALATED":
       return { icon: IconAlertTriangle, colorClass: "text-status-escalate" };

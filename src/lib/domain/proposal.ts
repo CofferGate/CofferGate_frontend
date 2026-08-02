@@ -51,6 +51,7 @@ export type Reconciliation = z.infer<typeof reconciliationSchema>;
 
 /** SPEC 12.5 Execution summary, extended with SPEC 12.6 reconciliation */
 export const executionSummarySchema = z.object({
+  mode: z.literal("demo").optional(),
   routeLabel: z.string().optional(),
   expectedInputAmount: z.string().optional(),
   expectedOutputAmount: z.string().optional(),
@@ -61,11 +62,23 @@ export const executionSummarySchema = z.object({
   computeUnits: z.number().optional(),
   kmsKeyVersion: z.string().optional(),
   kmsRequested: z.boolean(),
+  attestationSignature: z.string().optional(),
+  attestedAt: z.string().optional(),
   transactionSignature: z.string().optional(),
   submittedAt: z.string().optional(),
+  outputTokenAccount: z.string().optional(),
+  beforeOutputBalanceAtomic: z.string().optional(),
+  expectedOutputDeltaAtomic: z.string().optional(),
   confirmedAt: z.string().optional(),
   commitment: commitmentLevelSchema.optional(),
   reconciliation: reconciliationSchema.optional(),
+  failure: z
+    .object({
+      code: z.string(),
+      message: z.string(),
+      observedAt: z.string(),
+    })
+    .optional(),
 });
 export type ExecutionSummary = z.infer<typeof executionSummarySchema>;
 

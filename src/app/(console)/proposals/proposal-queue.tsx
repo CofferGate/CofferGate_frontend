@@ -47,6 +47,7 @@ const STATUS_LABELS: Record<ProposalStatus, string> = {
   PROPOSED: "제안 생성",
   AI_REVIEWED: "AI 검토 완료",
   POLICY_APPROVED: "정책 통과",
+  SIMULATED: "서명 증명 완료",
   ESCALATED: "검토 필요",
   BLOCKED: "차단됨",
   EXECUTING: "실행 중",
@@ -114,6 +115,9 @@ function proposalEvidence(proposal: Proposal) {
       .filter((rule) => rule.result === "FAIL")
       .map((rule) => rule.code);
     return violations.length > 0 ? violations.join(", ") : null;
+  }
+  if (proposal.status === "SIMULATED") {
+    return proposal.execution?.attestationSignature ?? null;
   }
   return proposal.execution?.transactionSignature ?? null;
 }
@@ -197,7 +201,10 @@ function Evidence({
     );
   }
 
-  const url = explorerUrl(evidence, environment);
+  const url =
+    proposal.status === "SIMULATED"
+      ? null
+      : explorerUrl(evidence, environment);
   if (url) {
     return (
       <a
@@ -216,7 +223,8 @@ function Evidence({
 
   return (
     <span className="font-mono text-[10px] text-foreground-muted" title={evidence}>
-      MOCK 식별자 {shorten(evidence, 8, 5)}
+      {proposal.status === "SIMULATED" ? "KMS 증명 " : "MOCK 식별자 "}
+      {shorten(evidence, 8, 5)}
     </span>
   );
 }
