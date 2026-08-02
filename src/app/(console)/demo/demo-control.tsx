@@ -481,24 +481,32 @@ export function DemoControl({
                   <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[10px]">
                     <div>
                       <dt className="text-foreground-subtle">정책 판정</dt>
-                      <dd className="mt-0.5 text-status-auto">자동 실행 · MOCK</dd>
+                      <dd className="mt-0.5 text-status-auto">
+                        {dataMode === "MOCK" ? "자동 실행 · MOCK" : "자동 실행 · LIVE"}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-foreground-subtle">실행 여부</dt>
                       <dd className="mt-0.5 text-foreground-muted">
-                        모의 실행 결과 확인
+                        {dataMode === "MOCK"
+                          ? "모의 실행 결과 확인"
+                          : "Devnet 실행 완료"}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-foreground-subtle">서명 요청 여부</dt>
                       <dd className="mt-0.5 text-foreground-muted">
-                        요청 조건 확인 · MOCK
+                        {dataMode === "MOCK"
+                          ? "요청 조건 확인 · MOCK"
+                          : "Cloud KMS 서명 완료"}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-foreground-subtle">거래 제출 여부</dt>
                       <dd className="mt-0.5 text-foreground-muted">
-                        실제 제출 없음 · MOCK
+                        {dataMode === "MOCK"
+                          ? "실제 제출 없음 · MOCK"
+                          : `온체인 제출 · ${autoProposal.execution?.commitment ?? "확인 완료"}`}
                       </dd>
                     </div>
                   </dl>
