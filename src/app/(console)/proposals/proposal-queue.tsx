@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   IconAlertTriangle,
@@ -17,6 +17,7 @@ import type {
   ProposalAction,
   ProposalStatus,
 } from "@/lib/domain";
+import { groupRepeatedBlockedProposals } from "./group-proposals";
 
 interface ProposalQueueProps {
   proposals: Proposal[];
@@ -233,12 +234,145 @@ function Evidence({
   );
 }
 
+function RepetitionControl({
+  count,
+  expanded,
+  onToggle,
+}: {
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  if (count <= 1) return null;
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onToggle();
+      }}
+      className="pointer-events-auto mt-1 inline-flex rounded border border-status-block/30 bg-status-block-subtle px-1.5 py-0.5 text-[9px] font-medium text-status-block hover:border-status-block/60"
+      aria-expanded={expanded}
+    >
+      동일 조건 {count}회 · {expanded ? "접기" : "기록 보기"}
+    </button>
+  );
+}
+
+function DesktopProposalRow({
+  proposal,
+  environment,
+  currentTime,
+  repeatedCount = 1,
+  expanded = false,
+  onToggle = () => undefined,
+  nested = false,
+}: {
+  proposal: Proposal;
+  environment: ApiEnvironment;
+  currentTime: number;
+  repeatedCount?: number;
+  expanded?: boolean;
+  onToggle?: () => void;
+  nested?: boolean;
+}) {
+  const expired = new Date(proposal.expiresAt).getTime() <= currentTime;
+  return (
+    <li className={`relative ${nested ? "bg-surface-raised/40" : ""}`}>
+      <Link
+        href={`/proposals/${proposal.proposalId}`}
+        className="absolute inset-0 z-0 transition-colors hover:bg-surface-raised"
+        aria-label={`${shorten(proposal.proposalId, 14, 4)} 상세 보기`}
+      />
+      <div className="pointer-events-none relative z-10 grid grid-cols-[1.25fr_0.8fr_0.9fr_1.15fr_1.05fr_0.95fr_1fr_0.4fr] items-center gap-3 px-4 py-3">
+        <div className={`min-w-0 ${nested ? "pl-4" : ""}`}>
+          <div className="truncate font-mono text-[11px] text-foreground" title={proposal.proposalId}>
+            {shorten(proposal.proposalId, 14, 4)}
+          </div>
+          <div className="mt-1 text-[10px] text-foreground-subtle">
+            {formatDateTime(proposal.dataAsOf)}
+          </div>
+          <RepetitionControl
+            count={repeatedCount}
+            expanded={expanded}
+            onToggle={onToggle}
+          />
+        </div>
+        <div className="text-[11px] text-foreground">
+          {ACTION_LABELS[proposal.action]}
+          <div className="font-mono text-[9px] text-foreground-subtle">{proposal.action}</div>
+        </div>
+        <div className="min-w-0 text-[11px] text-foreground">
+          <div>{proposal.inputSymbol ?? "—"} → {proposal.outputSymbol ?? "—"}</div>
+          <div className="mt-1 truncate text-[10px] text-foreground-muted">
+            {proposal.amountDisplay ?? (typeof proposal.amountUsd === "number" ? `$${proposal.amountUsd.toFixed(2)}` : "금액 없음")}
+          </div>
+        </div>
+        <DecisionBadge decision={proposal.decision} />
+        <StatusBadge status={proposal.status} expired={expired} />
+        <div className="text-[10px] text-foreground-muted">{formatDateTime(proposal.expiresAt)}</div>
+        <div className="pointer-events-auto min-w-0 overflow-hidden">
+          <Evidence proposal={proposal} environment={environment} />
+        </div>
+        <IconChevronRight size={15} stroke={1.7} className="justify-self-end text-foreground-subtle" aria-hidden="true" />
+      </div>
+    </li>
+  );
+}
+
+function MobileProposalRow({
+  proposal,
+  environment,
+  currentTime,
+  repeatedCount = 1,
+  expanded = false,
+  onToggle = () => undefined,
+  nested = false,
+}: {
+  proposal: Proposal;
+  environment: ApiEnvironment;
+  currentTime: number;
+  repeatedCount?: number;
+  expanded?: boolean;
+  onToggle?: () => void;
+  nested?: boolean;
+}) {
+  const expired = new Date(proposal.expiresAt).getTime() <= currentTime;
+  return (
+    <li className={`relative ${nested ? "bg-surface-raised/40" : ""}`}>
+      <Link href={`/proposals/${proposal.proposalId}`} className="absolute inset-0 z-0 transition-colors hover:bg-surface-raised" aria-label={`${shorten(proposal.proposalId, 14, 4)} 상세 보기`} />
+      <div className={`pointer-events-none relative z-10 px-4 py-4 ${nested ? "pl-8" : ""}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate font-mono text-[11px] text-foreground">{shorten(proposal.proposalId, 14, 4)}</div>
+            <div className="mt-1 text-[10px] text-foreground-subtle">생성 {formatDateTime(proposal.dataAsOf)}</div>
+            <RepetitionControl count={repeatedCount} expanded={expanded} onToggle={onToggle} />
+          </div>
+          <IconChevronRight size={15} stroke={1.7} className="text-foreground-subtle" aria-hidden="true" />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <DecisionBadge decision={proposal.decision} />
+          <StatusBadge status={proposal.status} expired={expired} />
+        </div>
+        <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-[11px] min-[400px]:grid-cols-2">
+          <div className="min-w-0"><dt className="text-foreground-subtle">실행 유형</dt><dd className="mt-0.5 text-foreground">{ACTION_LABELS[proposal.action]} · {proposal.action}</dd></div>
+          <div className="min-w-0"><dt className="text-foreground-subtle">자산 / 금액</dt><dd className="mt-0.5 break-words text-foreground">{proposal.inputSymbol ?? "—"} → {proposal.outputSymbol ?? "—"}<span className="ml-1 text-foreground-muted">{proposal.amountDisplay ?? (typeof proposal.amountUsd === "number" ? `$${proposal.amountUsd.toFixed(2)}` : "금액 없음")}</span></dd></div>
+          <div className="min-w-0"><dt className="text-foreground-subtle">만료 시각</dt><dd className="mt-0.5 text-foreground-muted">{formatDateTime(proposal.expiresAt)}</dd></div>
+          <div className="min-w-0"><dt className="text-foreground-subtle">증거 / 차단 사유</dt><dd className="pointer-events-auto mt-0.5"><Evidence proposal={proposal} environment={environment} /></dd></div>
+        </dl>
+      </div>
+    </li>
+  );
+}
+
 export function ProposalQueue({
   proposals,
   environment,
   now,
 }: ProposalQueueProps) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const currentTime = new Date(now).getTime();
 
   const options = useMemo(
@@ -288,9 +422,22 @@ export function ProposalQueue({
   );
 
   const hasActiveFilters = Object.values(filters).some(Boolean);
+  const proposalGroups = useMemo(
+    () => groupRepeatedBlockedProposals(filteredProposals),
+    [filteredProposals],
+  );
 
   function setFilter(key: keyof Filters, value: string) {
     setFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleGroup(key: string) {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
 
   return (
@@ -397,142 +544,58 @@ export function ProposalQueue({
               <span className="sr-only">상세</span>
             </div>
             <ul className="divide-y divide-border">
-              {filteredProposals.map((proposal) => {
-                const expired =
-                  new Date(proposal.expiresAt).getTime() <= currentTime;
+              {proposalGroups.map((group) => {
+                const expanded = expandedGroups.has(group.key);
                 return (
-                  <li key={proposal.proposalId} className="relative">
-                    <Link
-                      href={`/proposals/${proposal.proposalId}`}
-                      className="absolute inset-0 z-0 transition-colors hover:bg-surface-raised"
-                      aria-label={`${shorten(proposal.proposalId, 14, 4)} 상세 보기`}
+                  <Fragment key={group.key}>
+                    <DesktopProposalRow
+                      proposal={group.proposal}
+                      environment={environment}
+                      currentTime={currentTime}
+                      repeatedCount={group.repeatedProposals.length + 1}
+                      expanded={expanded}
+                      onToggle={() => toggleGroup(group.key)}
                     />
-                    <div className="pointer-events-none relative z-10 grid grid-cols-[1.25fr_0.8fr_0.9fr_1.15fr_1.05fr_0.95fr_1fr_0.4fr] items-center gap-3 px-4 py-3">
-                      <div className="min-w-0">
-                        <div
-                          className="truncate font-mono text-[11px] text-foreground"
-                          title={proposal.proposalId}
-                        >
-                          {shorten(proposal.proposalId, 14, 4)}
-                        </div>
-                        <div className="mt-1 text-[10px] text-foreground-subtle">
-                          {formatDateTime(proposal.dataAsOf)}
-                        </div>
-                      </div>
-                      <div className="text-[11px] text-foreground">
-                        {ACTION_LABELS[proposal.action]}
-                        <div className="font-mono text-[9px] text-foreground-subtle">
-                          {proposal.action}
-                        </div>
-                      </div>
-                      <div className="min-w-0 text-[11px] text-foreground">
-                        <div>
-                          {proposal.inputSymbol ?? "—"} →{" "}
-                          {proposal.outputSymbol ?? "—"}
-                        </div>
-                        <div className="mt-1 truncate text-[10px] text-foreground-muted">
-                          {proposal.amountDisplay ??
-                            (typeof proposal.amountUsd === "number"
-                              ? `$${proposal.amountUsd.toFixed(2)}`
-                              : "금액 없음")}
-                        </div>
-                      </div>
-                      <DecisionBadge decision={proposal.decision} />
-                      <StatusBadge status={proposal.status} expired={expired} />
-                      <div className="text-[10px] text-foreground-muted">
-                        {formatDateTime(proposal.expiresAt)}
-                      </div>
-                      <div className="pointer-events-auto min-w-0 overflow-hidden">
-                        <Evidence
+                    {expanded &&
+                      group.repeatedProposals.map((proposal) => (
+                        <DesktopProposalRow
+                          key={proposal.proposalId}
                           proposal={proposal}
                           environment={environment}
+                          currentTime={currentTime}
+                          nested
                         />
-                      </div>
-                      <IconChevronRight
-                        size={15}
-                        stroke={1.7}
-                        className="justify-self-end text-foreground-subtle"
-                        aria-hidden="true"
-                      />
-                    </div>
-                  </li>
+                      ))}
+                  </Fragment>
                 );
               })}
             </ul>
           </div>
 
           <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface md:hidden">
-            {filteredProposals.map((proposal) => {
-              const expired =
-                new Date(proposal.expiresAt).getTime() <= currentTime;
+            {proposalGroups.map((group) => {
+              const expanded = expandedGroups.has(group.key);
               return (
-                <li key={proposal.proposalId} className="relative">
-                  <Link
-                    href={`/proposals/${proposal.proposalId}`}
-                    className="absolute inset-0 z-0 transition-colors hover:bg-surface-raised"
-                    aria-label={`${shorten(proposal.proposalId, 14, 4)} 상세 보기`}
+                <Fragment key={group.key}>
+                  <MobileProposalRow
+                    proposal={group.proposal}
+                    environment={environment}
+                    currentTime={currentTime}
+                    repeatedCount={group.repeatedProposals.length + 1}
+                    expanded={expanded}
+                    onToggle={() => toggleGroup(group.key)}
                   />
-                  <div className="pointer-events-none relative z-10 px-4 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate font-mono text-[11px] text-foreground">
-                          {shorten(proposal.proposalId, 14, 4)}
-                        </div>
-                        <div className="mt-1 text-[10px] text-foreground-subtle">
-                          생성 {formatDateTime(proposal.dataAsOf)}
-                        </div>
-                      </div>
-                      <IconChevronRight
-                        size={15}
-                        stroke={1.7}
-                        className="text-foreground-subtle"
-                        aria-hidden="true"
+                  {expanded &&
+                    group.repeatedProposals.map((proposal) => (
+                      <MobileProposalRow
+                        key={proposal.proposalId}
+                        proposal={proposal}
+                        environment={environment}
+                        currentTime={currentTime}
+                        nested
                       />
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <DecisionBadge decision={proposal.decision} />
-                      <StatusBadge status={proposal.status} expired={expired} />
-                    </div>
-                    <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-[11px] min-[400px]:grid-cols-2">
-                      <div className="min-w-0">
-                        <dt className="text-foreground-subtle">실행 유형</dt>
-                        <dd className="mt-0.5 text-foreground">
-                          {ACTION_LABELS[proposal.action]} · {proposal.action}
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="text-foreground-subtle">자산 / 금액</dt>
-                        <dd className="mt-0.5 break-words text-foreground">
-                          {proposal.inputSymbol ?? "—"} →{" "}
-                          {proposal.outputSymbol ?? "—"}
-                          <span className="ml-1 text-foreground-muted">
-                            {proposal.amountDisplay ??
-                              (typeof proposal.amountUsd === "number"
-                                ? `$${proposal.amountUsd.toFixed(2)}`
-                                : "금액 없음")}
-                          </span>
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="text-foreground-subtle">만료 시각</dt>
-                        <dd className="mt-0.5 text-foreground-muted">
-                          {formatDateTime(proposal.expiresAt)}
-                        </dd>
-                      </div>
-                      <div className="min-w-0">
-                        <dt className="text-foreground-subtle">
-                          증거 / 차단 사유
-                        </dt>
-                        <dd className="pointer-events-auto mt-0.5">
-                          <Evidence
-                            proposal={proposal}
-                            environment={environment}
-                          />
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-                </li>
+                    ))}
+                </Fragment>
               );
             })}
           </ul>
