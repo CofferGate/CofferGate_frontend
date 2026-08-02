@@ -26,7 +26,7 @@ const VALUE_CARDS = [
     kicker: "POLICY · DECIDE",
     title: "정책이 예외 없이 판단합니다",
     description:
-      "결정론적 Policy Gate가 모든 제안을 AUTO, ESCALATE, BLOCK으로 판정합니다.",
+      "결정론적 Policy Gate가 모든 제안을 AUTO, NO_ACTION, BLOCK으로 판정합니다.",
     icon: IconGavel,
     colorClass: "text-status-auto",
   },
