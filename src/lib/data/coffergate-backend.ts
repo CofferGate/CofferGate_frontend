@@ -20,13 +20,15 @@ function readBackendBaseUrl(): string {
   return value;
 }
 
-const backendBaseUrl = readBackendBaseUrl();
-
 const auth = new GoogleAuth();
 let clientPromise: ReturnType<typeof auth.getIdTokenClient> | undefined;
+let clientAudience: string | undefined;
 
-function getClient() {
-  clientPromise ??= auth.getIdTokenClient(backendBaseUrl);
+function getClient(backendBaseUrl: string) {
+  if (!clientPromise || clientAudience !== backendBaseUrl) {
+    clientAudience = backendBaseUrl;
+    clientPromise = auth.getIdTokenClient(backendBaseUrl);
+  }
   return clientPromise;
 }
 
@@ -51,8 +53,10 @@ function fallbackError(status: number | undefined) {
 }
 
 export async function callBackend<ResponseData>(path: string): Promise<ResponseData> {
+  const backendBaseUrl = readBackendBaseUrl();
+
   try {
-    const client = await getClient();
+    const client = await getClient(backendBaseUrl);
     const response = await client.request<ResponseData>({
       method: "GET",
       url: `${backendBaseUrl}${path}`,
