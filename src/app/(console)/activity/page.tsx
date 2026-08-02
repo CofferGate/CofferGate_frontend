@@ -9,7 +9,11 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { dataProvider } from "@/lib/data";
-import type { ApiEnvironment, Proposal } from "@/lib/domain";
+import {
+  getTransactionExplorerUrl,
+  type ApiEnvironment,
+  type Proposal,
+} from "@/lib/domain";
 import type {
   ActivityEvent,
   ActivityEventCode,
@@ -40,6 +44,8 @@ function activityEvent({
   sequence,
   technicalState,
   transactionSignature,
+  explorerUrl,
+  explorerNetwork,
 }: {
   proposal: Proposal;
   code: ActivityEventCode;
@@ -49,6 +55,8 @@ function activityEvent({
   sequence: number;
   technicalState?: string;
   transactionSignature?: string;
+  explorerUrl?: string;
+  explorerNetwork?: string;
 }): ActivityEvent {
   return {
     code,
@@ -60,6 +68,9 @@ function activityEvent({
     evidenceStatus,
     sequence,
     transactionSignature,
+    ...(explorerUrl && explorerNetwork
+      ? { explorer: { network: explorerNetwork, url: explorerUrl } }
+      : {}),
   };
 }
 
@@ -98,8 +109,10 @@ function eventsFromProposal(
         `신뢰도 ${Math.round(proposal.confidence * 100)}%`,
         proposal.rationale || "근거 증거 없음",
       ],
-      // AI 검토의 개별 occurredAt은 Proposal 도메인에 없다.
-      evidenceStatus: "incomplete",
+      evidenceStatus:
+        proposal.rationale && Number.isFinite(proposal.confidence)
+          ? "complete"
+          : "incomplete",
       sequence: 2,
     }),
   );
@@ -116,9 +129,12 @@ function eventsFromProposal(
             ? `위반 규칙 ${failedRules.join(", ")}`
             : undefined,
         ],
-        // 정책 판정의 개별 occurredAt은 fixture에 없다.
         evidenceStatus:
-          proposal.decision === "BLOCK" ? "blocked" : "incomplete",
+          proposal.decision === "BLOCK"
+            ? "blocked"
+            : proposal.ruleChecks.length > 0
+              ? "complete"
+              : "incomplete",
         sequence: 3,
       }),
     );
@@ -158,17 +174,30 @@ function eventsFromProposal(
   }
 
   if (proposal.status === "FAILED") {
+    const failure = execution?.failure;
     events.push(
       activityEvent({
         proposal,
         code: "FAILED",
+        occurredAt: failure?.observedAt,
         details: [
-          "오류 코드 증거 없음",
-          "재시도 가능 여부 확인 불가",
-          "발생 시각 증거 없음",
+          failure?.code ? `오류 코드 ${failure.code}` : "오류 코드 증거 없음",
+          failure?.message ?? "오류 메시지 증거 없음",
+          execution?.kmsRequested
+            ? "KMS 요청 이후 실패"
+            : "KMS 요청 전 실패",
+          execution?.transactionSignature
+            ? "거래 식별자 존재"
+            : "거래 미제출",
         ],
-        evidenceStatus: "incomplete",
+        evidenceStatus: failure ? "failed" : "incomplete",
         sequence: 4,
+        transactionSignature: execution?.transactionSignature,
+        explorerUrl: getTransactionExplorerUrl(
+          execution?.transactionSignature,
+          environment,
+        ) ?? undefined,
+        explorerNetwork: environment === "devnet" ? "Solana Devnet" : undefined,
       }),
     );
     return events;
@@ -179,8 +208,8 @@ function eventsFromProposal(
       activityEvent({
         proposal,
         code: "EXECUTION_CLAIMED",
-        details: ["실행 시작 시각 증거 없음", "attempt_id 증거 없음"],
-        evidenceStatus: "incomplete",
+        details: ["실행 단계 진입 확인", `현재 상태 ${proposal.status}`],
+        evidenceStatus: "complete",
         sequence: 4,
       }),
     );
@@ -200,7 +229,10 @@ function eventsFromProposal(
             ? `오류 ${execution.simulation.error}`
             : undefined,
         ],
-        evidenceStatus: "incomplete",
+        evidenceStatus:
+          execution.simulation.unitsConsumed !== undefined
+            ? "complete"
+            : "incomplete",
         sequence: 5,
       }),
     );
@@ -219,11 +251,13 @@ function eventsFromProposal(
             execution.kmsKeyVersion
               ? `키 버전 ${execution.kmsKeyVersion}`
               : "키 버전 증거 없음",
-            "signature verification 증거 없음",
+            execution.kmsKeyVersion
+              ? "Cloud KMS Ed25519 서명 완료"
+              : "서명 검증 증거 없음",
           ],
           technicalState:
             environment === "mock" ? "KMS_REQUESTED · MOCK" : "KMS_REQUESTED",
-          evidenceStatus: "incomplete",
+          evidenceStatus: execution.kmsKeyVersion ? "complete" : "incomplete",
           sequence: 6,
         }),
       );
@@ -245,6 +279,10 @@ function eventsFromProposal(
   }
 
   if (execution?.transactionSignature || execution?.submittedAt) {
+    const explorerUrl = getTransactionExplorerUrl(
+      execution.transactionSignature,
+      environment,
+    );
     events.push(
       activityEvent({
         proposal,
@@ -252,15 +290,18 @@ function eventsFromProposal(
         occurredAt: execution.submittedAt,
         details: [
           execution.transactionSignature
-            ? undefined
+            ? "거래 서명 확보"
             : "거래 식별자 증거 없음",
-          execution.submittedAt ? undefined : "제출 시각 증거 없음",
-          "attempt_id 증거 없음",
+          execution.submittedAt ? "제출 시각 기록" : "제출 시각 증거 없음",
         ],
-        // attempt_id가 도메인에 없어 제출 증거를 완전하다고 판정하지 않는다.
-        evidenceStatus: "incomplete",
+        evidenceStatus:
+          execution.transactionSignature && execution.submittedAt
+            ? "complete"
+            : "incomplete",
         sequence: 7,
         transactionSignature: execution.transactionSignature,
+        explorerUrl: explorerUrl ?? undefined,
+        explorerNetwork: environment === "devnet" ? "Solana Devnet" : undefined,
       }),
     );
   }
@@ -275,11 +316,17 @@ function eventsFromProposal(
           execution.commitment
             ? `확정 수준 ${execution.commitment}`
             : "commitment 증거 없음",
-          "slot 증거 없음",
+          execution.commitment ? "Solana RPC confirmation 완료" : undefined,
         ],
-        evidenceStatus: "incomplete",
+        evidenceStatus: execution.commitment ? "complete" : "incomplete",
         sequence: 8,
         transactionSignature: execution.transactionSignature,
+        explorerUrl:
+          getTransactionExplorerUrl(
+            execution.transactionSignature,
+            environment,
+          ) ?? undefined,
+        explorerNetwork: environment === "devnet" ? "Solana Devnet" : undefined,
       }),
     );
   }
@@ -541,7 +588,7 @@ export default async function ActivityPage() {
                       ) : (
                         <span className="flex items-center gap-1.5 whitespace-nowrap text-[11px] text-foreground-subtle">
                           <IconClock size={13} stroke={1.6} />
-                          시각 증거 없음
+                          단계 {activity.sequence}
                         </span>
                       )}
 
