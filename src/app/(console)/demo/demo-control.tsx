@@ -282,6 +282,15 @@ export function DemoControl({
         </div>
       </header>
 
+      {dataMode === "LIVE" && (
+        <div className="mt-5 rounded-lg border border-cyan-400/25 bg-cyan-400/10 px-4 py-3 text-[11px] leading-relaxed text-foreground-muted">
+          이 화면은 백엔드에 저장된 실제 Devnet 완료·차단 기록을 단계별로
+          재생합니다. 시나리오 재생은 새 Proposal이나 추가 온체인 거래를
+          생성하지 않으며, 원본 기록은 제안 목록과 상세 화면에서 확인할 수
+          있습니다.
+        </div>
+      )}
+
       <section className="mt-6 grid gap-3 md:grid-cols-2" aria-label="데모 시나리오 선택">
         <article className="flex flex-col rounded-xl border border-status-auto/20 bg-surface p-5">
           <div className="flex items-center gap-2">
@@ -311,7 +320,7 @@ export function DemoControl({
             className="mt-4 inline-flex h-10 w-fit items-center gap-1.5 rounded-lg border border-status-auto/35 bg-status-auto-subtle px-3.5 text-xs font-medium text-status-auto transition-colors hover:bg-status-auto/20 disabled:cursor-not-allowed disabled:opacity-40 sm:h-9"
           >
             <IconPlayerPlay size={14} stroke={1.8} />
-            시나리오 시작
+            저장된 증거 재생
           </button>
         </article>
 
@@ -339,7 +348,7 @@ export function DemoControl({
             className="mt-4 inline-flex h-10 w-fit items-center gap-1.5 rounded-lg border border-status-block/35 bg-status-block-subtle px-3.5 text-xs font-medium text-status-block transition-colors hover:bg-status-block/20 disabled:cursor-not-allowed disabled:opacity-40 sm:h-9"
           >
             <IconPlayerPlay size={14} stroke={1.8} />
-            시나리오 시작
+            저장된 증거 재생
           </button>
         </article>
       </section>
@@ -367,7 +376,7 @@ export function DemoControl({
 
           {!selected ? (
             <div className="px-5 py-12 text-center text-[12px] text-foreground-muted">
-              위에서 시나리오를 선택해 시작해주세요.
+              위에서 저장된 Devnet 시나리오를 선택해 재생해주세요.
             </div>
           ) : (
             <ol className="px-5 py-2">

@@ -7,8 +7,12 @@ import {
   IconBan,
   IconCheck,
   IconChevronRight,
+  IconCircleCheck,
   IconClock,
   IconExternalLink,
+  IconLoader2,
+  IconShieldCheck,
+  IconX,
 } from "@tabler/icons-react";
 import type {
   ApiEnvironment,
@@ -71,9 +75,28 @@ const ACTION_LABELS: Record<ProposalAction, string> = {
 };
 
 const DECISION_STYLE: Record<PolicyDecision, string> = {
-  AUTO: "border-status-auto/30 bg-status-auto-subtle text-status-auto",
+  AUTO: "border-border-strong bg-surface-raised text-foreground-muted",
   ESCALATE: "border-status-escalate/30 bg-status-escalate-subtle text-status-escalate",
   BLOCK: "border-status-block/30 bg-status-block-subtle text-status-block",
+};
+
+const STATUS_STYLE: Record<
+  ProposalStatus,
+  { className: string; icon: typeof IconCheck }
+> = {
+  OBSERVED: { className: "border-border-strong bg-surface-raised text-foreground-muted", icon: IconClock },
+  PROPOSED: { className: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300", icon: IconClock },
+  AI_REVIEWED: { className: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300", icon: IconCheck },
+  POLICY_APPROVED: { className: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300", icon: IconCheck },
+  SIMULATED: { className: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300", icon: IconShieldCheck },
+  ESCALATED: { className: "border-status-escalate/30 bg-status-escalate-subtle text-status-escalate", icon: IconAlertTriangle },
+  BLOCKED: { className: "border-status-block/30 bg-status-block-subtle text-status-block", icon: IconBan },
+  EXECUTING: { className: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300", icon: IconLoader2 },
+  SUBMITTED: { className: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300", icon: IconLoader2 },
+  CONFIRMED: { className: "border-status-auto/30 bg-status-auto-subtle text-status-auto", icon: IconCheck },
+  RECONCILED: { className: "border-status-auto/30 bg-status-auto-subtle text-status-auto", icon: IconCircleCheck },
+  FAILED: { className: "border-status-block/30 bg-status-block-subtle text-status-block", icon: IconX },
+  EXPIRED: { className: "border-border-strong bg-surface-raised text-foreground-subtle", icon: IconClock },
 };
 
 function unique(values: string[]) {
@@ -110,6 +133,16 @@ function formatDateOption(value: string) {
   }).format(date);
 }
 
+function proposalActivityTime(proposal: Proposal) {
+  return (
+    proposal.execution?.failure?.observedAt ??
+    proposal.execution?.confirmedAt ??
+    proposal.execution?.submittedAt ??
+    proposal.execution?.attestedAt ??
+    proposal.dataAsOf
+  );
+}
+
 function proposalEvidence(proposal: Proposal) {
   if (proposal.status === "BLOCKED") {
     const violations = proposal.ruleChecks
@@ -119,6 +152,12 @@ function proposalEvidence(proposal: Proposal) {
   }
   if (proposal.status === "SIMULATED") {
     return proposal.execution?.attestationSignature ?? null;
+  }
+  if (proposal.status === "FAILED") {
+    const failure = proposal.execution?.failure;
+    return failure
+      ? `${failure.code} · ${failure.message}`
+      : "실행 실패 원인 없음";
   }
   return proposal.execution?.transactionSignature ?? null;
 }
@@ -164,11 +203,14 @@ function StatusBadge({
   status: ProposalStatus;
   expired: boolean;
 }) {
+  const style = STATUS_STYLE[status];
+  const StatusIcon = style.icon;
   return (
     <div className="flex flex-wrap items-center gap-1">
-      <span className="rounded-md border border-border-strong bg-surface-raised px-2 py-1 text-[11px] text-foreground">
+      <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium ${style.className}`}>
+        <StatusIcon size={12} stroke={1.8} aria-hidden="true" />
         {STATUS_LABELS[status]}
-        <span className="ml-1 font-mono text-[8px] text-foreground-subtle">
+        <span className="font-mono text-[8px] opacity-70">
           {status}
         </span>
       </span>
@@ -198,6 +240,14 @@ function Evidence({
     return (
       <span className="font-mono text-[10px] text-status-block" title={evidence}>
         {evidence}
+      </span>
+    );
+  }
+
+  if (proposal.status === "FAILED") {
+    return (
+      <span className="font-mono text-[10px] text-status-block" title={evidence}>
+        {shorten(evidence, 18, 8)}
       </span>
     );
   }
@@ -278,8 +328,16 @@ function DesktopProposalRow({
   nested?: boolean;
 }) {
   const expired = new Date(proposal.expiresAt).getTime() <= currentTime;
+  const outcomeAccent =
+    proposal.status === "FAILED" || proposal.status === "BLOCKED"
+      ? "border-l-2 border-l-status-block"
+      : proposal.status === "RECONCILED"
+        ? "border-l-2 border-l-status-auto"
+        : proposal.status === "SIMULATED"
+          ? "border-l-2 border-l-cyan-400"
+          : "";
   return (
-    <li className={`relative ${nested ? "bg-surface-raised/40" : ""}`}>
+    <li className={`relative ${outcomeAccent} ${nested ? "bg-surface-raised/40" : ""}`}>
       <Link
         href={`/proposals/${proposal.proposalId}`}
         className="absolute inset-0 z-0 transition-colors hover:bg-surface-raised"
@@ -291,7 +349,7 @@ function DesktopProposalRow({
             {shorten(proposal.proposalId, 14, 4)}
           </div>
           <div className="mt-1 text-[10px] text-foreground-subtle">
-            {formatDateTime(proposal.dataAsOf)}
+            {formatDateTime(proposalActivityTime(proposal))}
           </div>
           <RepetitionControl
             count={repeatedCount}
@@ -309,8 +367,8 @@ function DesktopProposalRow({
             {proposal.amountDisplay ?? (typeof proposal.amountUsd === "number" ? `$${proposal.amountUsd.toFixed(2)}` : "금액 없음")}
           </div>
         </div>
-        <DecisionBadge decision={proposal.decision} />
         <StatusBadge status={proposal.status} expired={expired} />
+        <DecisionBadge decision={proposal.decision} />
         <div className="text-[10px] text-foreground-muted">{formatDateTime(proposal.expiresAt)}</div>
         <div className="pointer-events-auto min-w-0 overflow-hidden">
           <Evidence proposal={proposal} environment={environment} />
@@ -339,21 +397,29 @@ function MobileProposalRow({
   nested?: boolean;
 }) {
   const expired = new Date(proposal.expiresAt).getTime() <= currentTime;
+  const outcomeAccent =
+    proposal.status === "FAILED" || proposal.status === "BLOCKED"
+      ? "border-l-2 border-l-status-block"
+      : proposal.status === "RECONCILED"
+        ? "border-l-2 border-l-status-auto"
+        : proposal.status === "SIMULATED"
+          ? "border-l-2 border-l-cyan-400"
+          : "";
   return (
-    <li className={`relative ${nested ? "bg-surface-raised/40" : ""}`}>
+    <li className={`relative ${outcomeAccent} ${nested ? "bg-surface-raised/40" : ""}`}>
       <Link href={`/proposals/${proposal.proposalId}`} className="absolute inset-0 z-0 transition-colors hover:bg-surface-raised" aria-label={`${shorten(proposal.proposalId, 14, 4)} 상세 보기`} />
       <div className={`pointer-events-none relative z-10 px-4 py-4 ${nested ? "pl-8" : ""}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="truncate font-mono text-[11px] text-foreground">{shorten(proposal.proposalId, 14, 4)}</div>
-            <div className="mt-1 text-[10px] text-foreground-subtle">생성 {formatDateTime(proposal.dataAsOf)}</div>
+            <div className="mt-1 text-[10px] text-foreground-subtle">최근 기록 {formatDateTime(proposalActivityTime(proposal))}</div>
             <RepetitionControl count={repeatedCount} expanded={expanded} onToggle={onToggle} />
           </div>
           <IconChevronRight size={15} stroke={1.7} className="text-foreground-subtle" aria-hidden="true" />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <DecisionBadge decision={proposal.decision} />
           <StatusBadge status={proposal.status} expired={expired} />
+          <DecisionBadge decision={proposal.decision} />
         </div>
         <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-[11px] min-[400px]:grid-cols-2">
           <div className="min-w-0"><dt className="text-foreground-subtle">실행 유형</dt><dd className="mt-0.5 text-foreground">{ACTION_LABELS[proposal.action]} · {proposal.action}</dd></div>
@@ -384,9 +450,8 @@ export function ProposalQueue({
           proposal.decision ? [proposal.decision] : [],
         ),
       ),
-      // Proposal 도메인에는 createdAt이 없으므로 dataAsOf를 생성·관찰 시각으로 사용한다.
       createdDates: unique(
-        proposals.map((proposal) => proposal.dataAsOf.slice(0, 10)),
+        proposals.map((proposal) => proposalActivityTime(proposal).slice(0, 10)),
       ).reverse(),
       policyVersions: unique(
         proposals.map((proposal) => proposal.policyVersion),
@@ -405,7 +470,8 @@ export function ProposalQueue({
             (!filters.action || proposal.action === filters.action) &&
             (!filters.decision || proposal.decision === filters.decision) &&
             (!filters.createdDate ||
-              proposal.dataAsOf.slice(0, 10) === filters.createdDate) &&
+              proposalActivityTime(proposal).slice(0, 10) ===
+                filters.createdDate) &&
             (!filters.policyVersion ||
               proposal.policyVersion === filters.policyVersion) &&
             (!filters.environment || environment === filters.environment),
@@ -415,7 +481,8 @@ export function ProposalQueue({
             Number(b.status === "ESCALATED") - Number(a.status === "ESCALATED");
           if (escalatedOrder !== 0) return escalatedOrder;
           return (
-            new Date(b.dataAsOf).getTime() - new Date(a.dataAsOf).getTime()
+            new Date(proposalActivityTime(b)).getTime() -
+            new Date(proposalActivityTime(a)).getTime()
           );
         }),
     [environment, filters, proposals],
@@ -489,7 +556,7 @@ export function ProposalQueue({
             }))}
           />
           <FilterSelect
-            label="생성일"
+            label="최근 기록일"
             value={filters.createdDate}
             onChange={(value) => setFilter("createdDate", value)}
             options={options.createdDates.map((value) => ({
@@ -534,11 +601,11 @@ export function ProposalQueue({
         <>
           <div className="mt-4 hidden overflow-hidden rounded-xl border border-border bg-surface md:block">
             <div className="grid grid-cols-[1.25fr_0.8fr_0.9fr_1.15fr_1.05fr_0.95fr_1fr_0.4fr] gap-3 border-b border-border bg-surface-raised/60 px-4 py-2 text-[10px] font-medium text-foreground-subtle">
-              <span>제안 / 생성 시각</span>
+              <span>제안 / 최근 기록</span>
               <span>실행 유형</span>
               <span>자산 / 금액</span>
+              <span>실행 결과</span>
               <span>정책 판정</span>
-              <span>현재 상태</span>
               <span>만료 시각</span>
               <span>증거 / 차단 사유</span>
               <span className="sr-only">상세</span>

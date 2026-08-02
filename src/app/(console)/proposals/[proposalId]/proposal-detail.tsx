@@ -86,10 +86,23 @@ const RULE_LABELS: Record<string, string> = {
 };
 
 const DECISION_STYLE: Record<PolicyDecision, string> = {
-  AUTO: "border-status-auto/30 bg-status-auto-subtle text-status-auto",
+  AUTO: "border-border-strong bg-surface-raised text-foreground-muted",
   ESCALATE:
     "border-status-escalate/30 bg-status-escalate-subtle text-status-escalate",
   BLOCK: "border-status-block/30 bg-status-block-subtle text-status-block",
+};
+
+const STATUS_STYLE: Partial<Record<ProposalStatus, string>> = {
+  POLICY_APPROVED: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300",
+  SIMULATED: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300",
+  EXECUTING: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300",
+  SUBMITTED: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300",
+  CONFIRMED: "border-status-auto/30 bg-status-auto-subtle text-status-auto",
+  RECONCILED: "border-status-auto/30 bg-status-auto-subtle text-status-auto",
+  BLOCKED: "border-status-block/30 bg-status-block-subtle text-status-block",
+  FAILED: "border-status-block/30 bg-status-block-subtle text-status-block",
+  ESCALATED:
+    "border-status-escalate/30 bg-status-escalate-subtle text-status-escalate",
 };
 
 const EVIDENCE_STATE = {
@@ -340,11 +353,26 @@ export function ProposalDetail({
         </div>
       </header>
 
-      <section className="mt-5 rounded-xl border border-border bg-surface p-5">
+      <section
+        className={`mt-5 rounded-xl border border-t-2 bg-surface p-5 ${
+          proposal.status === "FAILED" || proposal.status === "BLOCKED"
+            ? "border-border border-t-status-block"
+            : proposal.status === "RECONCILED"
+              ? "border-border border-t-status-auto"
+              : proposal.status === "SIMULATED"
+                ? "border-border border-t-cyan-400"
+                : "border-border"
+        }`}
+      >
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-border-strong bg-surface-raised px-2 py-1 text-[11px] text-foreground">
+          <span
+            className={`rounded-md border px-2 py-1 text-[11px] font-medium ${
+              STATUS_STYLE[proposal.status] ??
+              "border-border-strong bg-surface-raised text-foreground"
+            }`}
+          >
             {STATUS_LABELS[proposal.status]}
-            <span className="ml-1 font-mono text-[8px] text-foreground-subtle">
+            <span className="ml-1 font-mono text-[8px] opacity-70">
               {proposal.status}
             </span>
           </span>
