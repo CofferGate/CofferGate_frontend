@@ -26,6 +26,7 @@ export function MobileNavigation() {
 
     const background = document.getElementById("app-shell-background");
     const previousOverflow = document.body.style.overflow;
+    const menuButton = menuButtonRef.current;
     background?.setAttribute("inert", "");
     background?.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "hidden";
@@ -67,7 +68,7 @@ export function MobileNavigation() {
       background?.removeAttribute("inert");
       background?.removeAttribute("aria-hidden");
       document.body.style.overflow = previousOverflow;
-      window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+      window.requestAnimationFrame(() => menuButton?.focus());
     };
   }, [open]);
 
