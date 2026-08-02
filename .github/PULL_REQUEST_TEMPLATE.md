@@ -1,35 +1,23 @@
-## Summary
+## 변경 이유
 
-<!-- 무엇을 변경했는지 2~4줄로 설명합니다. -->
+<!-- 이 변경이 필요한 배경과 목적을 설명합니다. -->
 
-## Related Issue
-
-Closes #
-
-## Changes
+## 변경 내용
 
 - 
 
-## Validation
+## 검증
 
-- [ ] Unit and component tests
-- [ ] E2E or contract tests
-- [ ] Lint and type check
-- [ ] Responsive and accessibility verification
-
-검증 명령 또는 결과:
+- 실행한 테스트, lint, type check와 결과를 작성합니다.
 
 ```text
 
 ```
 
-## Security and Contract
+## 영향 및 위험
 
-- [ ] 비밀정보, API 키, 실제 자격증명이 포함되지 않았습니다.
-- [ ] API·SSE·domain schema 변경을 백엔드와 동기화했습니다.
-- [ ] LIVE/FIXTURE와 DEVNET/MAINNET 표시를 확인했습니다.
-- [ ] 오류, 만료, BLOCK, 재연결 상태를 확인했습니다.
+- 호환성, 보안, 운영 영향과 후속 작업을 작성합니다.
 
-## Notes
+## 관련 이슈
 
-<!-- 알려진 제한이나 후속 작업이 있다면 기록합니다. -->
+<!-- 관련 이슈가 있을 때 Closes #123 형식으로 연결합니다. -->

@@ -291,12 +291,16 @@ export function DemoControl({
             </h2>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-foreground-muted">
-            운영 잔액 보충 제안이 정책을 통과하는 과정을 모의 데이터로 확인합니다.
+            {dataMode === "MOCK"
+              ? "운영 잔액 보충 제안이 정책을 통과하는 과정을 모의 데이터로 확인합니다."
+              : "정책을 통과해 RECONCILED로 완료된 실제 Devnet 실행 증거를 확인합니다."}
           </p>
           <p className="mt-3 text-[11px] text-foreground-subtle">
             예상 결과{" "}
             <span className="font-medium text-foreground">
-              모의 거래 결과 및 잔액 증거 확인
+              {dataMode === "MOCK"
+                ? "모의 거래 결과 및 잔액 증거 확인"
+                : "Devnet 거래 및 MATCHED 정산 증거 확인"}
             </span>
           </p>
           <button
@@ -355,7 +359,9 @@ export function DemoControl({
               실행 단계
             </h2>
             <p className="mt-0.5 text-[10px] text-foreground-subtle">
-              MOCK fixture를 순서대로 표시하며 실제 자산을 이동하지 않습니다.
+              {dataMode === "MOCK"
+                ? "MOCK fixture를 순서대로 표시하며 실제 자산을 이동하지 않습니다."
+                : "저장된 실제 Devnet 실행 증거를 단계별로 재생합니다."}
             </p>
           </div>
 
