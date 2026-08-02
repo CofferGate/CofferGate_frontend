@@ -7,6 +7,7 @@ import {
   IconPlayerPlay,
   IconShieldX,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import { dataProvider } from "@/lib/data";
 import type { ApiEnvironment, Proposal } from "@/lib/domain";
 import type {
@@ -336,6 +337,14 @@ function proposalGroups(
       return {
         proposalId: proposal.proposalId,
         sortAt: occurredTimes[0],
+        action: proposal.action,
+        amount:
+          proposal.amountDisplay ??
+          (typeof proposal.amountUsd === "number"
+            ? `$${proposal.amountUsd.toFixed(2)}`
+            : undefined),
+        decision: proposal.decision,
+        status: proposal.status,
         events,
       };
     })
@@ -408,6 +417,28 @@ const EVIDENCE_STYLES: Record<
   },
 };
 
+function groupAccent(group: ProposalActivityGroup) {
+  if (group.status === "BLOCKED" || group.decision === "BLOCK") {
+    return {
+      border: "border-t-status-block",
+      badge: "border-status-block/30 bg-status-block-subtle text-status-block",
+      label: "정책 차단",
+    };
+  }
+  if (group.status === "RECONCILED") {
+    return {
+      border: "border-t-status-auto",
+      badge: "border-status-auto/30 bg-status-auto-subtle text-status-auto",
+      label: "정산 완료",
+    };
+  }
+  return {
+    border: "border-t-cyan-400",
+    badge: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300",
+    label: group.status,
+  };
+}
+
 export default async function ActivityPage() {
   const { data: proposals, meta } = await dataProvider.listProposals();
   const groups = proposalGroups(proposals, meta.environment);
@@ -432,19 +463,64 @@ export default async function ActivityPage() {
           아직 기록된 활동이 없습니다.
         </div>
       ) : (
-        <div className="mt-6 space-y-6">
-          {groups.map((group) => (
-            <section key={group.proposalId}>
-              <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] text-foreground-subtle">
-                <span>proposal_id</span>
-                <code
-                  className="break-all text-foreground-muted"
-                  title={group.proposalId}
-                >
-                  {group.proposalId}
-                </code>
-              </div>
-              <ol className="relative border-y border-border">
+        <div className="mt-6 space-y-8">
+          {groups.map((group) => {
+            const accent = groupAccent(group);
+            return (
+              <section
+                key={group.proposalId}
+                className={`overflow-hidden rounded-xl border border-t-2 border-border bg-surface shadow-sm ${accent.border}`}
+              >
+                <header className="flex flex-col gap-4 border-b border-border bg-surface-raised/60 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-md border px-2 py-1 text-[10px] font-medium ${accent.badge}`}
+                      >
+                        {accent.label}
+                      </span>
+                      <span className="rounded-md border border-border-strong bg-surface px-2 py-1 font-mono text-[9px] text-foreground-muted">
+                        {group.action}
+                      </span>
+                      {group.amount && (
+                        <span className="text-[12px] font-medium text-foreground">
+                          {group.amount}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-foreground-subtle">
+                        이벤트 {group.events.length}개
+                      </span>
+                    </div>
+                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="text-[10px] text-foreground-subtle">
+                        Proposal
+                      </span>
+                      <code
+                        className="break-all text-[11px] text-foreground"
+                        title={group.proposalId}
+                      >
+                        {group.proposalId}
+                      </code>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    {group.sortAt && (
+                      <time
+                        className="text-[10px] tabular-nums text-foreground-subtle"
+                        dateTime={group.sortAt}
+                      >
+                        최근 기록 {formatTime(group.sortAt)}
+                      </time>
+                    )}
+                    <Link
+                      href={`/proposals/${group.proposalId}`}
+                      className="rounded-md border border-border-strong px-3 py-1.5 text-[10px] font-medium text-foreground-muted transition-colors hover:bg-surface hover:text-foreground"
+                    >
+                      제안 상세
+                    </Link>
+                  </div>
+                </header>
+                <ol className="relative px-4 sm:px-5">
                 {group.events.map((activity) => {
                   const visual = EVIDENCE_STYLES[activity.evidenceStatus];
                   const StatusIcon = visual.icon;
@@ -488,16 +564,10 @@ export default async function ActivityPage() {
                         </div>
 
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-foreground-muted">
-                          <span
-                            className="font-mono text-foreground-subtle"
-                            title={activity.proposalId}
-                          >
-                            {abbreviate(activity.proposalId, 12, 4)}
-                          </span>
                           {activity.details.map((detail) => (
                             <span
                               key={detail}
-                              className="before:mr-2 before:text-border-strong before:content-['·']"
+                              className="after:ml-2 after:text-border-strong after:content-['·'] last:after:content-none"
                             >
                               {detail}
                             </span>
@@ -555,9 +625,10 @@ export default async function ActivityPage() {
                     </li>
                   );
                 })}
-              </ol>
-            </section>
-          ))}
+                </ol>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

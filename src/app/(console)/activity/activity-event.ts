@@ -37,5 +37,9 @@ export interface ActivityEvent {
 export interface ProposalActivityGroup {
   proposalId: string;
   sortAt?: string;
+  action: string;
+  amount?: string;
+  decision?: string;
+  status: string;
   events: ActivityEvent[];
 }
