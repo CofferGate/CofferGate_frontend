@@ -2,6 +2,10 @@
 
 CofferGate Frontend는 AI가 생성한 자산 운용 제안과 정책 판단, 실행 증거를 확인하는 운영 콘솔입니다. 프론트엔드는 정책 판정이나 거래 서명을 직접 수행하지 않으며, CofferGate Devnet 백엔드가 제공하는 결과를 서버에서 조회하고 Zod 계약 검증을 거쳐 화면에 표시합니다.
 
+> **공개 라이브 데모:** [https://coffergate-frontend-319878141012.asia-northeast3.run.app](https://coffergate-frontend-319878141012.asia-northeast3.run.app)
+>
+> 별도 GCP 권한 없이 브라우저에서 AUTO 실행, BLOCK 차단, Proposal 실행 증거와 시스템 상태를 확인할 수 있습니다.
+
 ## 주요 기능
 
 - 운영 대시보드
@@ -47,6 +51,13 @@ COFFERGATE_BACKEND_URL=https://<coffergate-backend-service-url>
 ```
 
 이 값은 공개 클라이언트 환경변수가 아닙니다. Next.js 서버가 요청 시 Google Cloud ID token을 발급받아 Cloud Run IAM으로 보호된 백엔드를 호출합니다. 로컬 환경에서는 백엔드 호출 권한이 있는 Google Application Default Credentials가 필요합니다. 인증 토큰이나 서비스 계정 키는 저장소에 저장하지 않습니다.
+
+팀 Devnet 백엔드처럼 IAM으로 보호된 Cloud Run 서비스를 사용한다면, 해당 서비스의 `roles/run.invoker` 권한이 있는 계정으로 Application Default Credentials를 설정합니다.
+
+```bash
+gcloud auth application-default login
+gcloud config set project <project-id>
+```
 
 ```bash
 npm run dev
@@ -100,8 +111,10 @@ Next.js 15.5.22, React 19.2.8, React DOM 19.2.8, TypeScript, Tailwind CSS, Zod, 
 
 실행 증거에는 Simulation 결과, Cloud KMS 서명 정보, Devnet transaction signature, confirmation 및 reconciliation 상태가 포함됩니다. `RECONCILED` 완료 상태와 Solana Explorer Devnet 링크를 통해 실행 결과를 확인할 수 있습니다.
 
-TypeScript 검사는 다음 명령으로 실행합니다.
+전체 자동 테스트, TypeScript 검사와 프로덕션 빌드는 다음 명령으로 실행합니다.
 
 ```bash
+npm test
 npx tsc --noEmit
+npm run build
 ```
