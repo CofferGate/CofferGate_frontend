@@ -7,11 +7,13 @@ import { sessionProvider } from "@/lib/auth";
 export default async function ProposalDetailPage({
   params,
 }: {
-  params: { proposalId: string };
+  params: Promise<{ proposalId: string }>;
 }) {
+  const { proposalId } = await params;
+
   try {
     const { data: proposal, meta } = await dataProvider.getProposal(
-      params.proposalId,
+      proposalId,
     );
     const [{ data: currentPolicy }, session] = await Promise.all([
       dataProvider.getCurrentPolicy(),
