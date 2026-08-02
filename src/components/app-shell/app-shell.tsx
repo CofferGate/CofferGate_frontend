@@ -5,8 +5,11 @@ import { consoleStateProvider } from "@/lib/data";
 import { sessionProvider } from "@/lib/auth";
 
 export async function AppShell({ children }: { children: ReactNode }) {
-  const [snapshot, session] = await Promise.all([
-    consoleStateProvider.getConsoleSnapshot(),
+  const [snapshotResult, session] = await Promise.all([
+    Promise.resolve(consoleStateProvider.getConsoleSnapshot()).then(
+      (value) => value,
+      () => null,
+    ),
     sessionProvider.getSession(),
   ]);
   const now = new Date().toISOString();
@@ -18,7 +21,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
     >
       <SideNav />
       <div className="flex min-w-0 max-w-full flex-1 flex-col overflow-x-hidden">
-        <TopBar snapshot={snapshot} session={session} now={now} />
+        <TopBar snapshot={snapshotResult} session={session} now={now} />
         <main className="min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto">
           <div className="mx-auto w-full min-w-0 max-w-[1280px] px-4 py-8 sm:px-7 lg:px-10">
             {children}
